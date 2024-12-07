@@ -257,7 +257,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.busy.locked():
             return
         with self.busy:
-            uri, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open project", "", "OpenOTDR Project Files(*.opro);;All Files (*)", options=QtWidgets.QFileDialog.DontUseNativeDialog)
+            dialog = QtWidgets.QFileDialog(self)
+            dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+            uri, _ = dialog.getOpenFileName(self, "Open project", "", "OpenOTDR Project Files(*.opro);;All Files (*)")
             if uri:
                 with open(uri, "r") as file:
                     content = json.load(file)
@@ -278,7 +280,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.busy.locked():
             return
         with self.busy:
-            uri, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save project", "", "OpenOTDR Project Files(*.opro);;All Files (*)", options=QtWidgets.QFileDialog.DontUseNativeDialog)
+            dialog = QtWidgets.QFileDialog(self)
+            dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+            uri, _ = dialog.getSaveFileName(self, "Save project", "", "OpenOTDR Project Files(*.opro);;All Files (*)")
             if uri:
                 _, extension = os.path.splitext(uri)
                 if not extension:
@@ -318,7 +322,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
                 self.raw_traces.append(raw_data)
-                self.recalculate_events()
+            self.recalculate_events()
             self._draw()
 
     def remove_trace(self):
@@ -333,7 +337,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.project_model.removeRow(index.row())
                 del self.raw_traces[index.row()]
             self._draw()
-    
+
     @staticmethod
     def _filter_events(raw_features):
         '''Filter the detected features of each trace to make a single set with no duplicates or ghosts'''
