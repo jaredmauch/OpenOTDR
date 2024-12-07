@@ -18,6 +18,8 @@ from matplotlib import cm
 from matplotlib import colors
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.widgets import Cursor
+
 import mainwindow
 
 
@@ -146,6 +148,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.user_interface.recalculateEvents.clicked.connect(self.recalculate_events)
         self.window_len = 0
         self.canvas = None
+        self.cursor = None
         self.toolbar = None
         self.raw_features = []
         self.raw_traces = []
@@ -191,6 +194,31 @@ class MainWindow(QtWidgets.QMainWindow):
         item.data = d_data
         self.project_model.appendRow(item)
 
+    def hover(event, graph_info):
+#        print("hover event:", dir(event))
+# hover graph_info: ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_guiEvent', '_guiEvent_deleted', '_last_axes_ref', '_lastevent', '_process', '_set_inaxes', 'button', 'canvas', 'dblclick', 'guiEvent', 'inaxes', 'key', 'lastevent', 'modifiers', 'name', 'step', 'x', 'xdata', 'y', 'ydata']
+
+        print("hover graph_info:", dir(graph_info))
+        print("graph_info.guiEvent:", graph_info.guiEvent)
+        print("graph_info.inaxes:", graph_info.inaxes)
+        print("graph_info.key:", graph_info.key)
+        print("graph_info.x:", graph_info.x)
+        print("graph_info.y:", graph_info.y)
+        print("graph_info.xdata:", graph_info.xdata)
+        print("graph_info.ydata:", graph_info.ydata)
+        print("graph_info.name:", graph_info.name)
+
+        if graph_info.inaxes == graph_info.ax:
+            cont, ind = line.contains(event)
+            if cont:
+                update_annot(ind)
+                annot.set_visible(True)
+                fig.canvas.draw_idle()
+            else:
+                if vis:
+                    annot.set_visible(False)
+                    fig.canvas.draw_idle()
+
     def _draw(self):
         '''(re)draw the plot with the latest data'''
         fig = Figure()
@@ -203,6 +231,7 @@ class MainWindow(QtWidgets.QMainWindow):
                          d_final_data["trace"][0],
                          label=wavelength,
                          color=wavelength_to_rgb(wavelength))
+            self.cursor = Cursor(plt, useblit=True, color='red', linewidth=2)
         if self.canvas:
             self.user_interface.graphLayout.removeWidget(self.canvas)
             self.canvas.close()
@@ -210,10 +239,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.user_interface.graphLayout.removeWidget(self.toolbar)
             self.toolbar.close()
         fig.legend()
+# if i want to have my own hover function
+#        fig.canvas.mpl_connect("motion_notify_event", self.hover)
         self.canvas = FigureCanvas(fig)
         self.toolbar = CustomNavigationToolbar(self.canvas, self, coordinates=True)
         self.user_interface.graphLayout.addWidget(self.canvas)
         self.user_interface.graphLayout.addWidget(self.toolbar)
+        self.recalculate_events()
+
 
     def open_project(self):
         '''Load a project from a file'''
@@ -236,6 +269,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self._draw()
                 self._draw()
         self.recalculate_events()
+        self._draw
 
     def save_project(self):
         '''Save a project to a file'''
@@ -284,6 +318,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
                 self.raw_traces.append(raw_data)
+                self.recalculate_events()
             self._draw()
 
     def remove_trace(self):
@@ -344,11 +379,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _update_events_table(self, d_events, raw_traces):
         '''Update the events table in the UI'''
+        print("_update_events_table")
         self.events_model.clear()
         self.events_model.setHorizontalHeaderLabels(['Event',
                                                      'Distance (km)',
                                                      'Loss (dB)',
                                                      'Dispersion factor'])
+#
+#       Qt.AlignRight
+
         #
         for position, meta_data in d_events.items():
             current_row = self.events_model.rowCount()
@@ -370,9 +409,16 @@ class MainWindow(QtWidgets.QMainWindow):
             event_type.setEditable(True)
             self.events_model.setItem(current_row, 0, event_type)
         self.events_model.sort(1)
+        print("events_model", dir(self.events_model))
+        print("events_model.property", self.events_model.property)
+        print("events_proxy_model", dir(self.events_proxy_model))
+        print("events_proxy_model", self.events_proxy_model.property)
+#        self.events_proxy_model.resizeColumnsToContents()
+#        self.user_interface.eventTableView.setModel.resizeColumnsToContents()
 
     def recalculate_events(self):
         '''Recalculate the events'''
+        print("starting recalculate_events()")
         if self.busy.locked():
             return
         with self.busy:
@@ -385,6 +431,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 l_feature_points.append(find_edges(differentiate_data(d_data)))
             raw_features = l_feature_points
             raw_traces = l_traces
+            print("recalculate_events: raw_features:", raw_features)
             if not raw_features:
                 return
             d_events = self._filter_events(raw_features)
