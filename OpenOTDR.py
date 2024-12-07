@@ -142,6 +142,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.events_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
         #
         self.user_interface.eventTableView.setModel(self.events_proxy_model)
+        print("self.user_interface.eventTableView:", type(self.user_interface.eventTableView))
+        print("self.user_interface.eventTableView.horizontalHeader():", type(self.user_interface.eventTableView.horizontalHeader()))
+        self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+
         #
         self.user_interface.openProject.clicked.connect(self.open_project)
         self.user_interface.saveProject.clicked.connect(self.save_project)
@@ -189,7 +193,7 @@ class MainWindow(QtWidgets.QMainWindow):
             d_meta = _project["meta"]
             l_raw_trace = _project["raw_trace"]
         self.files[url] = {"meta": d_meta, "raw_trace": l_raw_trace}
-#        print("d_meta=", json.dumps(d_meta, sort_keys=True, indent=4))
+        print("d_meta=", json.dumps(d_meta, sort_keys=True, indent=4))
 #        print("l_raw_trace=", json.dumps(l_raw_trace, sort_keys=True, indent=4))
         a_trace = self.__preprocess_data(d_meta, l_raw_trace)
         d_data= prepare_data({"meta":d_meta, "trace":a_trace}, self.window_len)
@@ -235,6 +239,8 @@ class MainWindow(QtWidgets.QMainWindow):
                          d_final_data["trace"][0],
                          label=wavelength,
                          color=wavelength_to_rgb(wavelength))
+            plt.set_xlim([0, None])
+
         if self.canvas:
             self.user_interface.graphLayout.removeWidget(self.canvas)
             self.canvas.close()
@@ -403,7 +409,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.events_model.setHorizontalHeaderLabels(['Event',
                                                      'Distance (km)',
                                                      'Loss (dB)',
-                                                     'Dispersion factor'])
+                                                     'Dispersion factor', 'Distance kft'])
 #
 #       Qt.AlignRight
 
@@ -411,28 +417,43 @@ class MainWindow(QtWidgets.QMainWindow):
         for position, meta_data in d_events.items():
             current_row = self.events_model.rowCount()
             self.events_model.insertRow(current_row)
-            event_position = QtGui.QStandardItem()
-            event_position.setText(str(position))
-            event_position.setEditable(False)
-            self.events_model.setItem(current_row, 1, event_position)
+            event_position_km = QtGui.QStandardItem()
+            event_position_km.setText(str(position))
+            event_position_km.setEditable(False)
+            self.events_model.setItem(current_row, 1, event_position_km)
+
+            event_position_kft = QtGui.QStandardItem()
+            event_position_kft.setEditable(False)
+            event_position_kft.setText(str(position * 3280.8399))
+            self.events_model.setItem(current_row, 4, event_position_kft)
+
             loss, dispersion_factor = self.__calculate_loss_and_dispersion(raw_traces, meta_data)
+
             event_loss = QtGui.QStandardItem()
             event_loss.setText(str(loss))
             event_loss.setEditable(False)
             self.events_model.setItem(current_row, 2, event_loss)
+
             event_dispersion = QtGui.QStandardItem()
             event_dispersion.setText(str(dispersion_factor))
             event_dispersion.setEditable(False)
             self.events_model.setItem(current_row, 3, event_dispersion)
+
+            # pull in event type from the trace ideally
             event_type = QtGui.QStandardItem()
             event_type.setEditable(True)
+#            event_type.setText("%s %s" % (str(position), str(meta_data)))
             self.events_model.setItem(current_row, 0, event_type)
+#            self.events_model.resizeColumnToContents(current_row)
+
         self.events_model.sort(1)
 #        self.eventTableView.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        print("events_model", dir(self.events_model))
-        print("events_model.property", self.events_model.property)
-        print("events_proxy_model", dir(self.events_proxy_model))
-        print("events_proxy_model", self.events_proxy_model.property)
+        self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+
+#        print("events_model", dir(self.events_model))
+#        print("events_model.property", self.events_model.property)
+#        print("events_proxy_model", dir(self.events_proxy_model))
+#        print("events_proxy_model", self.events_proxy_model.property)
 #        self.events_proxy_model.resizeColumnsToContents()
 #        self.user_interface.eventTableView.setModel.resizeColumnsToContents()
 
