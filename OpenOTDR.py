@@ -5,10 +5,14 @@ import os
 import json
 from collections import deque
 from threading import Lock
-from PyQt5 import QtWidgets
-from PyQt5 import QtPrintSupport
-from PyQt5 import QtGui
-from PyQt5 import QtCore
+from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QFileDialog
+from PyQt6 import QtPrintSupport
+from PyQt6 import QtGui
+from PyQt6 import QtCore
+#from PyQt6 import Qt
+import PyQt6
+import PyQt6.QtCore
 import numpy as np
 from scipy.ndimage import zoom
 from scipy.signal import find_peaks
@@ -135,7 +139,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #
         self.events_proxy_model = NaturalSortFilterProxyModel()
         self.events_proxy_model.setSourceModel(self.events_model)
-        self.events_proxy_model.sort(1, QtCore.Qt.AscendingOrder)
+        self.events_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
         #
         self.user_interface.eventTableView.setModel(self.events_proxy_model)
         #
@@ -253,9 +257,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.busy.locked():
             return
         with self.busy:
-            options = QtWidgets.QFileDialog.Options()
-            options |= QtWidgets.QFileDialog.DontUseNativeDialog
-            uri, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open project", "", "OpenOTDR Project Files(*.opro);;All Files (*)", options=options)
+            uri, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open project", "", "OpenOTDR Project Files(*.opro);;All Files (*)", options=QtWidgets.QFileDialog.DontUseNativeDialog)
             if uri:
                 with open(uri, "r") as file:
                     content = json.load(file)
@@ -276,9 +278,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.busy.locked():
             return
         with self.busy:
-            options = QtWidgets.QFileDialog.Options()
-            options |= QtWidgets.QFileDialog.DontUseNativeDialog
-            uri, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save project", "", "OpenOTDR Project Files(*.opro);;All Files (*)", options=options)
+            uri, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save project", "", "OpenOTDR Project Files(*.opro);;All Files (*)", options=QtWidgets.QFileDialog.DontUseNativeDialog)
             if uri:
                 _, extension = os.path.splitext(uri)
                 if not extension:
@@ -308,9 +308,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.busy.locked():
             return
         with self.busy:
-            options = QtWidgets.QFileDialog.Options()
-            options |= QtWidgets.QFileDialog.DontUseNativeDialog
-            files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "Add traces", "", "OTDR Trace Files(*.sor);;All Files (*)", options=options)
+            dialog = QtWidgets.QFileDialog(self)
+            dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+            files, _ = dialog.getOpenFileNames(self, "Add traces", "", "OTDR Trace Files(*.sor);;All Files (*)")
             if not files:
                 return
             for filename in files:
@@ -409,6 +409,7 @@ class MainWindow(QtWidgets.QMainWindow):
             event_type.setEditable(True)
             self.events_model.setItem(current_row, 0, event_type)
         self.events_model.sort(1)
+#        self.eventTableView.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         print("events_model", dir(self.events_model))
         print("events_model.property", self.events_model.property)
         print("events_proxy_model", dir(self.events_proxy_model))
@@ -444,4 +445,4 @@ MAIN_WINDOW = MainWindow()
 MAIN_WINDOW.setWindowTitle("OpenOTDR")
 MAIN_WINDOW.show()
 
-sys.exit(APP.exec_())
+sys.exit(APP.exec())
