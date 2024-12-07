@@ -235,7 +235,6 @@ class MainWindow(QtWidgets.QMainWindow):
                          d_final_data["trace"][0],
                          label=wavelength,
                          color=wavelength_to_rgb(wavelength))
-            self.cursor = Cursor(plt, useblit=True, color='red', linewidth=2)
         if self.canvas:
             self.user_interface.graphLayout.removeWidget(self.canvas)
             self.canvas.close()
@@ -247,6 +246,7 @@ class MainWindow(QtWidgets.QMainWindow):
 #        fig.canvas.mpl_connect("motion_notify_event", self.hover)
         self.canvas = FigureCanvas(fig)
         self.toolbar = CustomNavigationToolbar(self.canvas, self, coordinates=True)
+        self.cursor = Cursor(plt, horizOn=True, vertOn=True, useblit=True, color='red', linewidth=2)
         self.user_interface.graphLayout.addWidget(self.canvas)
         self.user_interface.graphLayout.addWidget(self.toolbar)
         self.recalculate_events()
@@ -322,7 +322,22 @@ class MainWindow(QtWidgets.QMainWindow):
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
                 self.raw_traces.append(raw_data)
-            self.recalculate_events()
+# recalculate_events inline
+            l_traces = []
+            l_feature_points = []
+            for index in range(self.project_model.rowCount()):
+                raw_data = self.project_model.item(index).data
+                d_data = prepare_data(raw_data, self.window_len)
+                l_traces.append(d_data)
+                l_feature_points.append(find_edges(differentiate_data(d_data)))
+            raw_features = l_feature_points
+            raw_traces = l_traces
+            print("recalculate_events: raw_features:", raw_features)
+            if not raw_features:
+                return
+            d_events = self._filter_events(raw_features)
+            self._update_events_table(d_events, raw_traces)
+
             self._draw()
 
     def remove_trace(self):
@@ -425,6 +440,7 @@ class MainWindow(QtWidgets.QMainWindow):
         '''Recalculate the events'''
         print("starting recalculate_events()")
         if self.busy.locked():
+            print("recalculate_events self.busy.locked()")
             return
         with self.busy:
             l_traces = []
