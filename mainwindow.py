@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1280, 761)
+        MainWindow.resize(1280, 760)
         self.mainWidget = QtWidgets.QWidget(parent=MainWindow)
         self.mainWidget.setObjectName("mainWidget")
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.mainWidget)
@@ -96,9 +96,9 @@ class Ui_MainWindow(object):
         self.metaDataWidget.setObjectName("metaDataWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.metaDataWidget)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.metaDataTable = QtWidgets.QTableView(parent=self.metaDataWidget)
-        self.metaDataTable.setObjectName("metaDataTable")
-        self.verticalLayout.addWidget(self.metaDataTable)
+        self.metaTableView = QtWidgets.QTableView(parent=self.metaDataWidget)
+        self.metaTableView.setObjectName("metaTableView")
+        self.verticalLayout.addWidget(self.metaTableView)
         self.tabWidget.addTab(self.metaDataWidget, "")
         self.horizontalLayout_3.addWidget(self.tabWidget)
         self.dataWidget = QtWidgets.QWidget(parent=self.mainWidget)

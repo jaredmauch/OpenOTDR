@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1280</width>
-    <height>761</height>
+    <height>760</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -192,53 +192,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QTableView" name="metaDataTable">
-          <row>
-           <property name="text">
-            <string>Project name</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Location A</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Location B</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Total distance (km)</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Total distance</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Launch length (km)</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Recieve length (km)</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Average loss (dB/km)</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>Total loss(dB)</string>
-           </property>
-          </row>
-         </widget>
+         <widget class="QTableView" name="metaTableView"/>
         </item>
        </layout>
       </widget>
