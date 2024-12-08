@@ -192,7 +192,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QTableWidget" name="metaDataTable">
+         <widget class="QTableView" name="metaDataTable">
           <row>
            <property name="text">
             <string>Project name</string>

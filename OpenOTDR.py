@@ -50,13 +50,29 @@ def _low_pass_filter_trace(a_raw_trace, window_len):
     return a_trace
 
 
-def prepare_data(d_data, window_len):
+def prepare_data(self, d_data, window_len):
     '''Transforms the trace data to unify sample width and signal quality'''
     a_raw_trace = d_data["trace"]
     # Smoothing
     a_smooth_trace = _low_pass_filter_trace(a_raw_trace, window_len)
     # Scale to ensure resolution per distance unit is equal.
     a_trace = zoom(a_smooth_trace, zoom=(1.0, d_data["meta"]["FxdParams"]["resolution"]), order=1)
+#    for k in d_data["meta"]["FxdParams"]:
+##        QtGui.QStandardItemModel()
+#        print(k)
+#        current_row = self.user_interface.metaDataTable.rowCount()
+#        self.user_interface.metaDataTable.insertRow(current_row)
+#        value_text = QtGui.QStandardItem()
+#        value_text.setText(str(k))
+#        value_text.setEditable(False)
+#        self.user_interface.metaDataTable.setItem(current_row, 0, value_text)
+#
+#        value_text = QtGui.QStandardItem()
+#        value_text.setText(str(d_data["meta"]["FxdParams"].get(k, None)))
+#        value_text.setEditable(False)
+#        self.user_interface.metaDataTable.setItem(current_row, 1, value_text)
+
+
     # Offsetting to make all launch levels the same
 #    print("a_trace[0] =", a_trace[0])
 #    print("len(a_trace[0]) =", len(a_trace[0]))
@@ -142,10 +158,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.events_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
         #
         self.user_interface.eventTableView.setModel(self.events_proxy_model)
-        print("self.user_interface.eventTableView:", type(self.user_interface.eventTableView))
-        print("self.user_interface.eventTableView.horizontalHeader():", type(self.user_interface.eventTableView.horizontalHeader()))
+#        print("self.user_interface.eventTableView:", type(self.user_interface.eventTableView))
+#        print("self.user_interface.eventTableView.horizontalHeader():", type(self.user_interface.eventTableView.horizontalHeader()))
         self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-
+        self.user_interface.metaDataTable = QtGui.QStandardItemModel()
         #
         self.user_interface.openProject.clicked.connect(self.open_project)
         self.user_interface.saveProject.clicked.connect(self.save_project)
@@ -156,6 +172,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.user_interface.recalculateEvents.clicked.connect(self.recalculate_events)
         self.window_len = 0
         self.canvas = None
+        self.plt = None
         self.cursor = None
         self.toolbar = None
         self.raw_features = []
@@ -196,7 +213,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print("d_meta=", json.dumps(d_meta, sort_keys=True, indent=4))
 #        print("l_raw_trace=", json.dumps(l_raw_trace, sort_keys=True, indent=4))
         a_trace = self.__preprocess_data(d_meta, l_raw_trace)
-        d_data= prepare_data({"meta":d_meta, "trace":a_trace}, self.window_len)
+        d_data= prepare_data(self, {"meta":d_meta, "trace":a_trace}, self.window_len)
         filename = os.path.basename(url)
         item = QtGui.QStandardItem(filename)
         item.data = d_data
@@ -212,7 +229,8 @@ class MainWindow(QtWidgets.QMainWindow):
         print("graph_info.key:", graph_info.key)
         print("graph_info.x:", graph_info.x)
         print("graph_info.y:", graph_info.y)
-        print("graph_info.xdata:", graph_info.xdata)
+        print("graph_info.xdata(km):", graph_info.xdata)
+        print("grpah_info.xdata(feet):", graph_info.xdata * 3280.8399)
         print("graph_info.ydata:", graph_info.ydata)
         print("graph_info.name:", graph_info.name)
 
@@ -227,19 +245,43 @@ class MainWindow(QtWidgets.QMainWindow):
                     annot.set_visible(False)
                     fig.canvas.draw_idle()
 
+
+    def on_draw(self, event):
+        print("on_draw:", event)
+#        self.cursor = Cursor(self.plt, horizOn=True, vertOn=True, useblit=True, color='red', linewidth=2)
+
+    def button_press(event, graph_info):
+#        print("button_press event:", dir(event))
+# button_press graph_info: ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_guiEvent', '_guiEvent_deleted', '_last_axes_ref', '_lastevent', '_process', '_set_inaxes', 'button', 'canvas', 'dblclick', 'guiEvent', 'inaxes', 'key', 'lastevent', 'modifiers', 'name', 'step', 'x', 'xdata', 'y', 'ydata']
+
+#        print("button_press graph_info:", dir(graph_info))
+        print("graph_info.guiEvent:", graph_info.guiEvent)
+        print("graph_info.inaxes:", graph_info.inaxes)
+        print("graph_info.key:", graph_info.key)
+        print("graph_info.button:", graph_info.button) # (1 left, 2 middle, 3 right)
+        print("graph_info.dblclick:", graph_info.dblclick) # doubleclick?
+#        print("graph_info.x:", graph_info.x)
+#        print("graph_info.y:", graph_info.y)
+        print("graph_info.xdata(km):", graph_info.xdata)
+        print("grpah_info.xdata(feet):", graph_info.xdata * 3280.8399)
+
+        print("graph_info.ydata:", graph_info.ydata)
+        print("graph_info.name:", graph_info.name)
+
+
     def _draw(self):
         '''(re)draw the plot with the latest data'''
         fig = Figure()
-        plt = fig.add_subplot(1, 1, 1)
+        self.plt = fig.add_subplot(1, 1, 1)
         if self.raw_traces:
             for d_final_data in self.raw_traces:
                 wavelength = d_final_data["meta"]["GenParams"]["wavelength"]
 #                print("wavelength=", wavelength)
-                plt.plot(d_final_data["trace"][1],
+                self.plt.plot(d_final_data["trace"][1],
                          d_final_data["trace"][0],
                          label=wavelength,
                          color=wavelength_to_rgb(wavelength))
-            plt.set_xlim([0, None])
+            self.plt.set_xlim([0, None])
 
         if self.canvas:
             self.user_interface.graphLayout.removeWidget(self.canvas)
@@ -250,9 +292,13 @@ class MainWindow(QtWidgets.QMainWindow):
         fig.legend()
 # if i want to have my own hover function
 #        fig.canvas.mpl_connect("motion_notify_event", self.hover)
+        fig.canvas.mpl_connect("button_press_event", self.button_press)
+#        fig.canvas.mpl_connect("scroll_event", self.zoom)
+        fig.canvas.mpl_connect('draw_event', self.on_draw)
+
         self.canvas = FigureCanvas(fig)
         self.toolbar = CustomNavigationToolbar(self.canvas, self, coordinates=True)
-        self.cursor = Cursor(plt, horizOn=True, vertOn=True, useblit=True, color='red', linewidth=2)
+        self.cursor = Cursor(self.plt, horizOn=True, vertOn=True, useblit=True, color='red', linewidth=2)
         self.user_interface.graphLayout.addWidget(self.canvas)
         self.user_interface.graphLayout.addWidget(self.toolbar)
         self.recalculate_events()
@@ -333,7 +379,7 @@ class MainWindow(QtWidgets.QMainWindow):
             l_feature_points = []
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
-                d_data = prepare_data(raw_data, self.window_len)
+                d_data = prepare_data(self, raw_data, self.window_len)
                 l_traces.append(d_data)
                 l_feature_points.append(find_edges(differentiate_data(d_data)))
             raw_features = l_feature_points
@@ -365,7 +411,7 @@ class MainWindow(QtWidgets.QMainWindow):
         d_events = {}
         for trace_features in raw_features:
             for index, feature in enumerate(trace_features[2]):
-                feature_position = round_sig(feature, 1)
+                feature_position = round_sig(feature, 3)
                 if feature_position not in d_events and feature_position-0.1 not in d_events and feature_position+0.1 not in d_events:
                     d_events[feature_position] = {
                         "indexes": []
@@ -407,11 +453,10 @@ class MainWindow(QtWidgets.QMainWindow):
         print("_update_events_table")
         self.events_model.clear()
         self.events_model.setHorizontalHeaderLabels(['Event',
-                                                     'Distance (km)',
+                                                     'Dist (km)',
                                                      'Loss (dB)',
-                                                     'Dispersion factor', 'Distance kft'])
+                                                     'Dispersion factor', 'Dist ft'])
 #
-#       Qt.AlignRight
 
         #
         for position, meta_data in d_events.items():
@@ -442,20 +487,11 @@ class MainWindow(QtWidgets.QMainWindow):
             # pull in event type from the trace ideally
             event_type = QtGui.QStandardItem()
             event_type.setEditable(True)
-#            event_type.setText("%s %s" % (str(position), str(meta_data)))
             self.events_model.setItem(current_row, 0, event_type)
-#            self.events_model.resizeColumnToContents(current_row)
 
         self.events_model.sort(1)
-#        self.eventTableView.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
-#        print("events_model", dir(self.events_model))
-#        print("events_model.property", self.events_model.property)
-#        print("events_proxy_model", dir(self.events_proxy_model))
-#        print("events_proxy_model", self.events_proxy_model.property)
-#        self.events_proxy_model.resizeColumnsToContents()
-#        self.user_interface.eventTableView.setModel.resizeColumnsToContents()
 
     def recalculate_events(self):
         '''Recalculate the events'''
@@ -468,7 +504,7 @@ class MainWindow(QtWidgets.QMainWindow):
             l_feature_points = []
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
-                d_data = prepare_data(raw_data, self.window_len)
+                d_data = prepare_data(self, raw_data, self.window_len)
                 l_traces.append(d_data)
                 l_feature_points.append(find_edges(differentiate_data(d_data)))
             raw_features = l_feature_points
