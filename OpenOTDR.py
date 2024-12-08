@@ -297,7 +297,8 @@ class MainWindow(QtWidgets.QMainWindow):
         fig.canvas.mpl_connect('draw_event', self.on_draw)
 
         self.canvas = FigureCanvas(fig)
-        self.toolbar = CustomNavigationToolbar(self.canvas, self, coordinates=True)
+#        self.toolbar = CustomNavigationToolbar(self.canvas, self, coordinates=True)
+        self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
         self.cursor = Cursor(self.plt, horizOn=True, vertOn=True, useblit=True, color='red', linewidth=2)
         self.user_interface.graphLayout.addWidget(self.canvas)
         self.user_interface.graphLayout.addWidget(self.toolbar)
