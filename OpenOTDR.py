@@ -57,20 +57,24 @@ def prepare_data(self, d_data, window_len):
     a_smooth_trace = _low_pass_filter_trace(a_raw_trace, window_len)
     # Scale to ensure resolution per distance unit is equal.
     a_trace = zoom(a_smooth_trace, zoom=(1.0, d_data["meta"]["FxdParams"]["resolution"]), order=1)
-#    for k in d_data["meta"]["FxdParams"]:
-##        QtGui.QStandardItemModel()
-#        print(k)
-#        current_row = self.user_interface.metaDataTable.rowCount()
-#        self.user_interface.metaDataTable.insertRow(current_row)
-#        value_text = QtGui.QStandardItem()
-#        value_text.setText(str(k))
-#        value_text.setEditable(False)
-#        self.user_interface.metaDataTable.setItem(current_row, 0, value_text)
+    self.meta_model.clear()
+    self.meta_model.setHorizontalHeaderLabels(['Name', 'Value'])
+
+    for k in d_data["meta"]["FxdParams"]:
+#        print(dir(self.user_interface.metaTableView))
+        current_row = self.meta_model.rowCount()
+        self.meta_model.insertRow(current_row)
+        value_text = QtGui.QStandardItem()
+        value_text.setText(str(k))
+        value_text.setEditable(False)
+        self.meta_model.setItem(current_row, 0, value_text)
 #
-#        value_text = QtGui.QStandardItem()
-#        value_text.setText(str(d_data["meta"]["FxdParams"].get(k, None)))
-#        value_text.setEditable(False)
-#        self.user_interface.metaDataTable.setItem(current_row, 1, value_text)
+        value_text = QtGui.QStandardItem()
+        value_text.setText(str(d_data["meta"]["FxdParams"].get(k, None)))
+        value_text.setEditable(False)
+        self.meta_model.setItem(current_row, 1, value_text)
+
+#    self.user_interface.metaTableView.horizontalHeaderItem().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
 
     # Offsetting to make all launch levels the same
@@ -156,12 +160,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.events_proxy_model = NaturalSortFilterProxyModel()
         self.events_proxy_model.setSourceModel(self.events_model)
         self.events_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
-        #
         self.user_interface.eventTableView.setModel(self.events_proxy_model)
-#        print("self.user_interface.eventTableView:", type(self.user_interface.eventTableView))
-#        print("self.user_interface.eventTableView.horizontalHeader():", type(self.user_interface.eventTableView.horizontalHeader()))
         self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.user_interface.metaDataTable = QtGui.QStandardItemModel()
+#
+        # meta processing model
+        self.meta_model = QtGui.QStandardItemModel()
+#
+        self.meta_proxy_model = NaturalSortFilterProxyModel()
+        self.meta_proxy_model.setSourceModel(self.meta_model)
+#        self.meta_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
+        self.user_interface.metaTableView.setModel(self.meta_proxy_model)
+        self.user_interface.metaTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         #
         self.user_interface.openProject.clicked.connect(self.open_project)
         self.user_interface.saveProject.clicked.connect(self.save_project)
