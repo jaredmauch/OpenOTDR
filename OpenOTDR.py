@@ -60,7 +60,22 @@ def prepare_data(self, d_data, window_len):
     self.meta_model.clear()
     self.meta_model.setHorizontalHeaderLabels(['Name', 'Value'])
 
-    for k in d_data["meta"]["FxdParams"]:
+    # GenParams
+    for k in d_data["meta"]["GenParams"]:
+#        print(dir(self.user_interface.metaTableView))
+        current_row = self.meta_model.rowCount()
+        self.meta_model.insertRow(current_row)
+        value_text = QtGui.QStandardItem()
+        value_text.setText(str(k))
+        value_text.setEditable(False)
+        self.meta_model.setItem(current_row, 0, value_text)
+#
+        value_text = QtGui.QStandardItem()
+        value_text.setText(str(d_data["meta"]["GenParams"].get(k, None)))
+        value_text.setEditable(False)
+        self.meta_model.setItem(current_row, 1, value_text)
+
+    for k in d_data["meta"]["FxdParams"]: 
 #        print(dir(self.user_interface.metaTableView))
         current_row = self.meta_model.rowCount()
         self.meta_model.insertRow(current_row)
@@ -73,6 +88,7 @@ def prepare_data(self, d_data, window_len):
         value_text.setText(str(d_data["meta"]["FxdParams"].get(k, None)))
         value_text.setEditable(False)
         self.meta_model.setItem(current_row, 1, value_text)
+
 
 #    self.user_interface.metaTableView.horizontalHeaderItem().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
@@ -181,6 +197,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.user_interface.recalculateEvents.clicked.connect(self.recalculate_events)
         self.window_len = 0
         self.canvas = None
+        self.d_meta = None
         self.plt = None
         self.cursor = None
         self.toolbar = None
@@ -218,6 +235,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             d_meta = _project["meta"]
             l_raw_trace = _project["raw_trace"]
+        self.d_meta = d_meta
         self.files[url] = {"meta": d_meta, "raw_trace": l_raw_trace}
         print("d_meta=", json.dumps(d_meta, sort_keys=True, indent=4))
 #        print("l_raw_trace=", json.dumps(l_raw_trace, sort_keys=True, indent=4))
@@ -462,43 +480,96 @@ class MainWindow(QtWidgets.QMainWindow):
         '''Update the events table in the UI'''
         print("_update_events_table")
         self.events_model.clear()
-        self.events_model.setHorizontalHeaderLabels(['Event',
-                                                     'Dist (km)',
-                                                     'Loss (dB)',
-                                                     'Dispersion factor', 'Dist ft'])
-#
+        key_events = self.d_meta.get('KeyEvents', None)
+#        print("update_events_table: key_events:", key_events)
+        num_events = 0
+        if key_events is not None:
+            num_events = int(key_events.get('num events', 0))
+            print("num_events:", num_events)
+        self.events_model.setHorizontalHeaderLabels(['comment', 'dist(km)', 'dist(ft)', 'peak', 'refl loss', 'slope', 'splice_loss', 'type'])
 
-        #
-        for position, meta_data in d_events.items():
+        for e_num in range (1, num_events + 1):
+            event = key_events.get("event %d" % e_num)
             current_row = self.events_model.rowCount()
             self.events_model.insertRow(current_row)
+
+            event_comment = QtGui.QStandardItem()
+            event_comment.setText(str(event.get('comments')))
+            event_comment.setEditable(False)
+            self.events_model.setItem(current_row, 0, event_comment)
+
             event_position_km = QtGui.QStandardItem()
-            event_position_km.setText(str(position))
+            event_position_km.setText(str(event.get('distance', 0)))
             event_position_km.setEditable(False)
             self.events_model.setItem(current_row, 1, event_position_km)
 
-            event_position_kft = QtGui.QStandardItem()
-            event_position_kft.setEditable(False)
-            event_position_kft.setText(str(position * 3280.8399))
-            self.events_model.setItem(current_row, 4, event_position_kft)
+            event_position_ft = QtGui.QStandardItem()
+            event_position_ft.setEditable(False)
+            event_position_ft.setText(str(float(event.get('distance', 0)) * 3280.8399))
+            self.events_model.setItem(current_row, 2, event_position_ft)
 
-            loss, dispersion_factor = self.__calculate_loss_and_dispersion(raw_traces, meta_data)
+            event_peak = QtGui.QStandardItem()
+            event_peak.setText(str(event.get('peak')))
+            event_peak.setEditable(False)
+            self.events_model.setItem(current_row, 3, event_peak)
 
             event_loss = QtGui.QStandardItem()
-            event_loss.setText(str(loss))
+            event_loss.setText(str(event.get('refl loss')))
             event_loss.setEditable(False)
-            self.events_model.setItem(current_row, 2, event_loss)
+            self.events_model.setItem(current_row, 4, event_loss)
 
-            event_dispersion = QtGui.QStandardItem()
-            event_dispersion.setText(str(dispersion_factor))
-            event_dispersion.setEditable(False)
-            self.events_model.setItem(current_row, 3, event_dispersion)
+            event_slope = QtGui.QStandardItem()
+            event_slope.setText(str(event.get('slope')))
+            event_slope.setEditable(False)
+            self.events_model.setItem(current_row, 5, event_slope)
 
-            # pull in event type from the trace ideally
+            event_splice_loss = QtGui.QStandardItem()
+            event_splice_loss.setText(str(event.get('splice loss')))
+            event_splice_loss.setEditable(False)
+            self.events_model.setItem(current_row, 6, event_splice_loss)
+
             event_type = QtGui.QStandardItem()
-            event_type.setEditable(True)
-            self.events_model.setItem(current_row, 0, event_type)
+            event_type.setText(str(event.get('type')))
+            event_type.setEditable(False)
+            self.events_model.setItem(current_row, 7, event_type)
 
+##        self.events_model.setHorizontalHeaderLabels(['Event',
+##                                                     'Dist (km)',
+##                                                     'Loss (dB)',
+##                                                     'Dispersion factor', 'Dist ft'])
+###
+##
+##        #
+##        for position, meta_data in d_events.items():
+##            current_row = self.events_model.rowCount()
+##            self.events_model.insertRow(current_row)
+##            event_position_km = QtGui.QStandardItem()
+##            event_position_km.setText(str(position))
+##            event_position_km.setEditable(False)
+##            self.events_model.setItem(current_row, 1, event_position_km)
+##
+##            event_position_ft = QtGui.QStandardItem()
+##            event_position_ft.setEditable(False)
+##            event_position_ft.setText(str(position * 3280.8399))
+##            self.events_model.setItem(current_row, 4, event_position_ft)
+##
+##            loss, dispersion_factor = self.__calculate_loss_and_dispersion(raw_traces, meta_data)
+##
+##            event_loss = QtGui.QStandardItem()
+##            event_loss.setText(str(loss))
+##            event_loss.setEditable(False)
+##            self.events_model.setItem(current_row, 2, event_loss)
+##
+##            event_dispersion = QtGui.QStandardItem()
+##            event_dispersion.setText(str(dispersion_factor))
+##            event_dispersion.setEditable(False)
+##            self.events_model.setItem(current_row, 3, event_dispersion)
+##
+##            # pull in event type from the trace ideally
+##            event_type = QtGui.QStandardItem()
+##            event_type.setEditable(True)
+##            self.events_model.setItem(current_row, 0, event_type)
+##
         self.events_model.sort(1)
         self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
