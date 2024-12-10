@@ -471,54 +471,54 @@ class MainWindow(QtWidgets.QMainWindow):
                 key_events = row
 #        print("update_events_table: key_events:", key_events)
         num_events = 0
+        self.events_model.setHorizontalHeaderLabels(['comment', 'dist(km)', 'dist(ft)', 'peak', 'refl loss', 'slope', 'splice_loss', 'type'])
         if key_events is not None:
             number_of_events = int(key_events.get('number_of_events', 0))
             print("number_of_events:", number_of_events)
-        self.events_model.setHorizontalHeaderLabels(['comment', 'dist(km)', 'dist(ft)', 'peak', 'refl loss', 'slope', 'splice_loss', 'type'])
 
-        for event in key_events.get('events', []):
-            current_row = self.events_model.rowCount()
-            self.events_model.insertRow(current_row)
+            for event in key_events.get('events', []):
+                current_row = self.events_model.rowCount()
+                self.events_model.insertRow(current_row)
 
-            event_comment = QtGui.QStandardItem()
-            event_comment.setText(str(event.get('comment')))
-            event_comment.setEditable(False)
-            self.events_model.setItem(current_row, 0, event_comment)
+                event_comment = QtGui.QStandardItem()
+                event_comment.setText(str(event.get('comment')))
+                event_comment.setEditable(False)
+                self.events_model.setItem(current_row, 0, event_comment)
 
-            event_position_km = QtGui.QStandardItem()
-            event_position_km.setText(str(event.get('distance_of_travel', 0)))
-            event_position_km.setEditable(False)
-            self.events_model.setItem(current_row, 1, event_position_km)
+                event_position_km = QtGui.QStandardItem()
+                event_position_km.setText(str(event.get('distance_of_travel', 0)))
+                event_position_km.setEditable(False)
+                self.events_model.setItem(current_row, 1, event_position_km)
 
-            event_position_ft = QtGui.QStandardItem()
-            event_position_ft.setEditable(False)
-            event_position_ft.setText(str(float(event.get('distance_of_travel', 0)) * 3280.8399))
-            self.events_model.setItem(current_row, 2, event_position_ft)
+                event_position_ft = QtGui.QStandardItem()
+                event_position_ft.setEditable(False)
+                event_position_ft.setText(str(float(event.get('distance_of_travel', 0)) * 3280.8399))
+                self.events_model.setItem(current_row, 2, event_position_ft)
 
-            event_peak = QtGui.QStandardItem()
-            event_peak.setText(str(event.get('peak_point')))
-            event_peak.setEditable(False)
-            self.events_model.setItem(current_row, 3, event_peak)
+                event_peak = QtGui.QStandardItem()
+                event_peak.setText(str(event.get('peak_point')))
+                event_peak.setEditable(False)
+                self.events_model.setItem(current_row, 3, event_peak)
 
-            event_loss = QtGui.QStandardItem()
-            event_loss.setText(str(event.get('reflection_loss')))
-            event_loss.setEditable(False)
-            self.events_model.setItem(current_row, 4, event_loss)
+                event_loss = QtGui.QStandardItem()
+                event_loss.setText(str(event.get('reflection_loss')))
+                event_loss.setEditable(False)
+                self.events_model.setItem(current_row, 4, event_loss)
 
-            event_slope = QtGui.QStandardItem()
-            event_slope.setText(str(event.get('slope')))
-            event_slope.setEditable(False)
-            self.events_model.setItem(current_row, 5, event_slope)
+                event_slope = QtGui.QStandardItem()
+                event_slope.setText(str(event.get('slope')))
+                event_slope.setEditable(False)
+                self.events_model.setItem(current_row, 5, event_slope)
 
-            event_splice_loss = QtGui.QStandardItem()
-            event_splice_loss.setText(str(event.get('splice_loss')))
-            event_splice_loss.setEditable(False)
-            self.events_model.setItem(current_row, 6, event_splice_loss)
+                event_splice_loss = QtGui.QStandardItem()
+                event_splice_loss.setText(str(event.get('splice_loss')))
+                event_splice_loss.setEditable(False)
+                self.events_model.setItem(current_row, 6, event_splice_loss)
 
-            event_type = QtGui.QStandardItem()
-            event_type.setText(str(event.get('event_type_details')['event']))
-            event_type.setEditable(False)
-            self.events_model.setItem(current_row, 7, event_type)
+                event_type = QtGui.QStandardItem()
+                event_type.setText(str(event.get('event_type_details')['event']))
+                event_type.setEditable(False)
+                self.events_model.setItem(current_row, 7, event_type)
 
 ##        self.events_model.setHorizontalHeaderLabels(['Event',
 ##                                                     'Dist (km)',
