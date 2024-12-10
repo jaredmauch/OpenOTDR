@@ -16,7 +16,8 @@ import PyQt6.QtCore
 import numpy as np
 from scipy.ndimage import zoom
 from scipy.signal import find_peaks
-from pyotdr import sorparse
+#from pyotdr import sorparse
+import otdrparser
 from matplotlib.figure import Figure
 from matplotlib import cm
 from matplotlib import colors
@@ -50,64 +51,50 @@ def _low_pass_filter_trace(a_raw_trace, window_len):
     return a_trace
 
 
-def prepare_data(self, d_data, window_len):
+def prepare_data(self, window_len):
     '''Transforms the trace data to unify sample width and signal quality'''
-    a_raw_trace = d_data["trace"]
+    #a_raw_trace = d_data["trace"]
     # Smoothing
-    a_smooth_trace = _low_pass_filter_trace(a_raw_trace, window_len)
+    #a_smooth_trace = _low_pass_filter_trace(a_raw_trace, window_len)
     # Scale to ensure resolution per distance unit is equal.
-    a_trace = zoom(a_smooth_trace, zoom=(1.0, d_data["meta"]["FxdParams"]["resolution"]), order=1)
+    #a_trace = zoom(a_smooth_trace, zoom=(1.0, d_data["meta"]["FxdParams"]["resolution"]), order=1)
     self.meta_model.clear()
     self.meta_model.setHorizontalHeaderLabels(['Name', 'Value'])
 
-    # GenParams
-    for k in d_data["meta"]["GenParams"]:
-#        print(dir(self.user_interface.metaTableView))
-        current_row = self.meta_model.rowCount()
-        self.meta_model.insertRow(current_row)
-        value_text = QtGui.QStandardItem()
-        value_text.setText(str(k))
-        value_text.setEditable(False)
-        self.meta_model.setItem(current_row, 0, value_text)
+    raw_data = {}
+    raw_data[0] = []
+    raw_data[1] = []
+    for kind in self.d_meta:
+        if kind.get('name', None) == 'DataPts':
+            data_pts = kind.get('data_points', None)
+            for dp in data_pts:
+                raw_data[0].append(dp[0])
+                raw_data[1].append(dp[1])
+
+        if kind.get('name', None) in ('GenParams', 'SupParams', 'FxdParams'):
+#            print(kind)
+            for k in kind:
+#                print("k=", k)
+                if k == 'name':
+                    continue
+                current_row = self.meta_model.rowCount()
+                self.meta_model.insertRow(current_row)
+                value_text = QtGui.QStandardItem()
+                value_text.setText(str(k))
+                value_text.setEditable(False)
+                self.meta_model.setItem(current_row, 0, value_text)
 #
-        value_text = QtGui.QStandardItem()
-        value_text.setText(str(d_data["meta"]["GenParams"].get(k, None)))
-        value_text.setEditable(False)
-        self.meta_model.setItem(current_row, 1, value_text)
+                value_text = QtGui.QStandardItem()
+                value_text.setText(str(kind.get(k, None)))
+                value_text.setEditable(False)
+                self.meta_model.setItem(current_row, 1, value_text)
 
-    for k in d_data["meta"]["FxdParams"]: 
-#        print(dir(self.user_interface.metaTableView))
-        current_row = self.meta_model.rowCount()
-        self.meta_model.insertRow(current_row)
-        value_text = QtGui.QStandardItem()
-        value_text.setText(str(k))
-        value_text.setEditable(False)
-        self.meta_model.setItem(current_row, 0, value_text)
-#
-        value_text = QtGui.QStandardItem()
-        value_text.setText(str(d_data["meta"]["FxdParams"].get(k, None)))
-        value_text.setEditable(False)
-        self.meta_model.setItem(current_row, 1, value_text)
-
-
-#    self.user_interface.metaTableView.horizontalHeaderItem().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-
-
-    # Offsetting to make all launch levels the same
-#    print("a_trace[0] =", a_trace[0])
-#    print("len(a_trace[0]) =", len(a_trace[0]))
-    try:
-        n_offset = -a_trace[0][325]
-    except:
-        n_offset = 0.0
-#    print("n_offset=", n_offset)
-    a_trace[0] = a_trace[0] + n_offset
-    return {"meta": d_data["meta"], "trace": a_trace}
+    return raw_data
 
 
 def differentiate_data(d_data):
     '''Calculates the 1st order differential of the data'''
-    a_raw_trace = d_data["trace"]
+    a_raw_trace = d_data
     a_diff_trace = np.diff(a_raw_trace[0])
     a_clean_trace = []
     for sample_index in range(len(a_raw_trace[0])):
@@ -175,7 +162,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #
         self.events_proxy_model = NaturalSortFilterProxyModel()
         self.events_proxy_model.setSourceModel(self.events_model)
-        self.events_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
+#        self.events_proxy_model.sort(1, PyQt6.QtCore.Qt.SortOrder.AscendingOrder)
         self.user_interface.eventTableView.setModel(self.events_proxy_model)
         self.user_interface.eventTableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 #
@@ -229,18 +216,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _load_file(self, url, _project=False):
         '''Load the raw SOR file from provided url into the internal data format'''
-        if not _project:
-            _, d_meta, l_raw_trace = sorparse(url)
-            d_meta["url"] = url
-        else:
-            d_meta = _project["meta"]
-            l_raw_trace = _project["raw_trace"]
-        self.d_meta = d_meta
-        self.files[url] = {"meta": d_meta, "raw_trace": l_raw_trace}
-        print("d_meta=", json.dumps(d_meta, sort_keys=True, indent=4))
+        with open(url, 'rb') as fp:
+            d_meta = otdrparser.parse(fp)
+            self.d_meta = d_meta
+            data_pts = None
+            for row in d_meta:
+                if row.get('name', None) == "DataPts":
+                    data_pts = row
+            self.files[url] = {"meta": d_meta, "raw_trace": data_pts}
+#        print("d_meta=", json.dumps(d_meta, sort_keys=True, indent=4))
 #        print("l_raw_trace=", json.dumps(l_raw_trace, sort_keys=True, indent=4))
-        a_trace = self.__preprocess_data(d_meta, l_raw_trace)
-        d_data= prepare_data(self, {"meta":d_meta, "trace":a_trace}, self.window_len)
+#        a_trace = self.__preprocess_data(d_meta, l_raw_trace)
+        d_data= prepare_data(self, self.window_len)
         filename = os.path.basename(url)
         item = QtGui.QStandardItem(filename)
         item.data = d_data
@@ -301,14 +288,16 @@ class MainWindow(QtWidgets.QMainWindow):
         fig = Figure()
         self.plt = fig.add_subplot(1, 1, 1)
         if self.raw_traces:
+#            print("self.raw_traces:", self.raw_traces)
             for d_final_data in self.raw_traces:
-                wavelength = d_final_data["meta"]["GenParams"]["wavelength"]
+                wavelength = 1310
+                print("d_final_data", d_final_data)
 #                print("wavelength=", wavelength)
-                self.plt.plot(d_final_data["trace"][1],
-                         d_final_data["trace"][0],
+                self.plt.plot(d_final_data[0],
+                         d_final_data[1],
                          label=wavelength,
-                         color=wavelength_to_rgb(wavelength))
-            self.plt.set_xlim([0, None])
+                         color=wavelength_to_rgb(str(wavelength)))
+#            self.plt.set_xlim([0, None])
 
         if self.canvas:
             self.user_interface.graphLayout.removeWidget(self.canvas)
@@ -399,25 +388,21 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
             for filename in files:
                 self._load_file(filename)
-            for index in range(self.project_model.rowCount()):
-                raw_data = self.project_model.item(index).data
-                self.raw_traces.append(raw_data)
-# recalculate_events inline
             l_traces = []
             l_feature_points = []
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
-                d_data = prepare_data(self, raw_data, self.window_len)
+                self.raw_traces.append(raw_data)
+                d_data = prepare_data(self, self.window_len)
                 l_traces.append(d_data)
                 l_feature_points.append(find_edges(differentiate_data(d_data)))
             raw_features = l_feature_points
             raw_traces = l_traces
-            print("recalculate_events: raw_features:", raw_features)
-            if not raw_features:
-                return
+#            print("add_trace: raw_features:", raw_features)
+#            if not raw_features:
+#                return
             d_events = self._filter_events(raw_features)
             self._update_events_table(d_events, raw_traces)
-
             self._draw()
 
     def remove_trace(self):
@@ -480,41 +465,43 @@ class MainWindow(QtWidgets.QMainWindow):
         '''Update the events table in the UI'''
         print("_update_events_table")
         self.events_model.clear()
-        key_events = self.d_meta.get('KeyEvents', None)
+        key_events = None
+        for row in self.d_meta:
+            if row.get('name', None) == 'KeyEvents':
+                key_events = row
 #        print("update_events_table: key_events:", key_events)
         num_events = 0
         if key_events is not None:
-            num_events = int(key_events.get('num events', 0))
-            print("num_events:", num_events)
+            number_of_events = int(key_events.get('number_of_events', 0))
+            print("number_of_events:", number_of_events)
         self.events_model.setHorizontalHeaderLabels(['comment', 'dist(km)', 'dist(ft)', 'peak', 'refl loss', 'slope', 'splice_loss', 'type'])
 
-        for e_num in range (1, num_events + 1):
-            event = key_events.get("event %d" % e_num)
+        for event in key_events.get('events', []):
             current_row = self.events_model.rowCount()
             self.events_model.insertRow(current_row)
 
             event_comment = QtGui.QStandardItem()
-            event_comment.setText(str(event.get('comments')))
+            event_comment.setText(str(event.get('comment')))
             event_comment.setEditable(False)
             self.events_model.setItem(current_row, 0, event_comment)
 
             event_position_km = QtGui.QStandardItem()
-            event_position_km.setText(str(event.get('distance', 0)))
+            event_position_km.setText(str(event.get('distance_of_travel', 0)))
             event_position_km.setEditable(False)
             self.events_model.setItem(current_row, 1, event_position_km)
 
             event_position_ft = QtGui.QStandardItem()
             event_position_ft.setEditable(False)
-            event_position_ft.setText(str(float(event.get('distance', 0)) * 3280.8399))
+            event_position_ft.setText(str(float(event.get('distance_of_travel', 0)) * 3280.8399))
             self.events_model.setItem(current_row, 2, event_position_ft)
 
             event_peak = QtGui.QStandardItem()
-            event_peak.setText(str(event.get('peak')))
+            event_peak.setText(str(event.get('peak_point')))
             event_peak.setEditable(False)
             self.events_model.setItem(current_row, 3, event_peak)
 
             event_loss = QtGui.QStandardItem()
-            event_loss.setText(str(event.get('refl loss')))
+            event_loss.setText(str(event.get('reflection_loss')))
             event_loss.setEditable(False)
             self.events_model.setItem(current_row, 4, event_loss)
 
@@ -524,12 +511,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.events_model.setItem(current_row, 5, event_slope)
 
             event_splice_loss = QtGui.QStandardItem()
-            event_splice_loss.setText(str(event.get('splice loss')))
+            event_splice_loss.setText(str(event.get('splice_loss')))
             event_splice_loss.setEditable(False)
             self.events_model.setItem(current_row, 6, event_splice_loss)
 
             event_type = QtGui.QStandardItem()
-            event_type.setText(str(event.get('type')))
+            event_type.setText(str(event.get('event_type_details')['event']))
             event_type.setEditable(False)
             self.events_model.setItem(current_row, 7, event_type)
 
@@ -585,7 +572,7 @@ class MainWindow(QtWidgets.QMainWindow):
             l_feature_points = []
             for index in range(self.project_model.rowCount()):
                 raw_data = self.project_model.item(index).data
-                d_data = prepare_data(self, raw_data, self.window_len)
+                d_data = prepare_data(self, self.window_len)
                 l_traces.append(d_data)
                 l_feature_points.append(find_edges(differentiate_data(d_data)))
             raw_features = l_feature_points
@@ -594,7 +581,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if not raw_features:
                 return
             d_events = self._filter_events(raw_features)
-            self._update_events_table(d_events, raw_traces)
+            self._update_events_table(d_events, d_data)
 
 
 APP = QtWidgets.QApplication(sys.argv)
